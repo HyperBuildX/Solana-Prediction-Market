@@ -6,7 +6,7 @@ const router = Router();
 
 router.post("/create", proposeValidator, market.create_market);
 router.post("/add", market.additionalInfo);
-router.post("/addLiquidity", market.add_liquidity);
+router.post("/addLiquidity", market.addLiquidity);
 router.post("/betting", market.betting);
 router.post("/liquidity", market.addLiquidity);
 router.get("/get", market.getMarketData);
