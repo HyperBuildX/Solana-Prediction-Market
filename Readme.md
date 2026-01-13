@@ -1,4 +1,4 @@
-# Polymarket Copy Trading Bot
+# Polymarket Trading Bot - Copy Trading Bot
 
 > Automated trading bot for Polymarket with copy trading and frontrunning capabilities
 
