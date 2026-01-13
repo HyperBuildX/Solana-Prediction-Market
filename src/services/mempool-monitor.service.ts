@@ -51,14 +51,19 @@ export class MempoolMonitorService {
   }
 
   private async isProcessed(txHash: string): Promise<boolean> {
-    // Check in-memory first (fast)
+    // Check in-memory first (fast, synchronous)
     if (this.processedHashes.has(txHash)) {
       return true;
     }
 
-    // Check database if available
+    // Check database if available (async)
     if (this.deps.database) {
-      return await this.deps.database.isProcessed(txHash);
+      const dbResult = await this.deps.database.isProcessed(txHash);
+      // Cache the result in memory to avoid future DB queries
+      if (dbResult) {
+        this.processedHashes.add(txHash);
+      }
+      return dbResult;
     }
 
     return false;
@@ -87,11 +92,12 @@ export class MempoolMonitorService {
     this.provider = new ethers.providers.JsonRpcProvider(env.rpcUrl, network);
     this.isRunning = true;
 
-    // Subscribe to pending transactions
+    // Subscribe to pending transactions with error handling
     this.provider.on('pending', (txHash: string) => {
       if (this.isRunning) {
-        void this.handlePendingTransaction(txHash).catch(() => {
-          // Silently handle errors for mempool monitoring
+        void this.handlePendingTransaction(txHash).catch((err) => {
+          // Log errors but don't block the event loop
+          this.deps.logger.debug(`Error handling pending transaction ${txHash}: ${err instanceof Error ? err.message : String(err)}`);
         });
       }
     });
@@ -143,17 +149,19 @@ export class MempoolMonitorService {
   private async monitorRecentOrders(): Promise<void> {
     const { logger, env } = this.deps;
     
-    // Monitor all addresses from env (these are the addresses we want to frontrun)
-    for (const targetAddress of env.targetAddresses) {
+    // Monitor all addresses in parallel for better performance
+    const promises = env.targetAddresses.map(async (targetAddress) => {
       try {
         await this.checkRecentActivity(targetAddress);
       } catch (err) {
         if (axios.isAxiosError(err) && err.response?.status === 404) {
-          continue;
+          return;
         }
         logger.debug(`Error checking activity for ${targetAddress}: ${err instanceof Error ? err.message : String(err)}`);
       }
-    }
+    });
+    
+    await Promise.allSettled(promises);
   }
 
   private async checkRecentActivity(targetAddress: string): Promise<void> {
@@ -166,6 +174,9 @@ export class MempoolMonitorService {
       const now = Math.floor(Date.now() / 1000);
       const cutoffTime = now - 60; // Only check very recent activities (last 60 seconds)
 
+      // Filter and process trades in parallel where possible
+      const tradePromises: Promise<void>[] = [];
+      
       for (const activity of activities) {
         if (activity.type !== 'TRADE') continue;
 
@@ -176,65 +187,86 @@ export class MempoolMonitorService {
         // Only process very recent trades (potential frontrun targets)
         if (activityTime < cutoffTime) continue;
         
-        // Skip if already processed
-        if (await this.isProcessed(activity.transactionHash)) continue;
-
         const lastTime = this.lastFetchTime.get(targetAddress) || 0;
         if (activityTime <= lastTime) continue;
 
-        // Check minimum trade size
+        // Check minimum trade size early (before async operations)
         const sizeUsd = activity.usdcSize || activity.size * activity.price;
         const minTradeSize = env.minTradeSizeUsd || 100;
         if (sizeUsd < minTradeSize) continue;
 
-        // Check if transaction is still pending (frontrun opportunity)
-        const txStatus = await this.checkTransactionStatus(activity.transactionHash);
-        if (txStatus === 'confirmed') {
-          // Too late to frontrun
-          await this.markProcessed(activity.transactionHash);
-          continue;
-        }
-
-        // Extract gas price from pending transaction
-        let targetGasPrice: string | undefined;
-        try {
-          const tx = await this.provider!.getTransaction(activity.transactionHash);
-          if (tx) {
-            targetGasPrice = tx.gasPrice?.toString() || tx.maxFeePerGas?.toString();
-          }
-        } catch (err) {
-          logger.debug(`Could not extract gas price from tx ${activity.transactionHash}: ${err instanceof Error ? err.message : String(err)}`);
-        }
-
-        logger.info(
-          `[Frontrun] Detected pending trade: ${activity.side.toUpperCase()} ${sizeUsd.toFixed(2)} USD on market ${activity.conditionId}`,
-        );
-
-        const signal: TradeSignal = {
-          trader: targetAddress,
-          marketId: activity.conditionId,
-          tokenId: activity.asset,
-          outcome: activity.outcomeIndex === 0 ? 'YES' : 'NO',
-          side: activity.side.toUpperCase() as 'BUY' | 'SELL',
-          sizeUsd,
-          price: activity.price,
-          timestamp: activityTime * 1000,
-          pendingTxHash: activity.transactionHash,
-          targetGasPrice,
-        };
-
-        await this.markProcessed(activity.transactionHash);
-        this.lastFetchTime.set(targetAddress, Math.max(this.lastFetchTime.get(targetAddress) || 0, activityTime));
-
-        // Execute frontrun
-        await this.deps.onDetectedTrade(signal);
+        // Process this trade asynchronously
+        tradePromises.push(this.processTradeActivity(activity, targetAddress, activityTime, sizeUsd));
       }
+      
+      // Wait for all trade processing to complete
+      await Promise.allSettled(tradePromises);
     } catch (err) {
       if (axios.isAxiosError(err) && err.response?.status === 404) {
         return;
       }
       throw err;
     }
+  }
+
+  private async processTradeActivity(
+    activity: ActivityResponse,
+    targetAddress: string,
+    activityTime: number,
+    sizeUsd: number,
+  ): Promise<void> {
+    const { logger, env } = this.deps;
+    
+    // Skip if already processed (check in-memory first for speed)
+    if (this.processedHashes.has(activity.transactionHash)) {
+      return;
+    }
+    
+    // Check database if available (async)
+    if (await this.isProcessed(activity.transactionHash)) {
+      return;
+    }
+
+    // Check if transaction is still pending (frontrun opportunity) - do this in parallel with gas price extraction
+    const [txStatus, tx] = await Promise.allSettled([
+      this.checkTransactionStatus(activity.transactionHash),
+      this.provider!.getTransaction(activity.transactionHash).catch(() => null),
+    ]);
+
+    if (txStatus.status === 'fulfilled' && txStatus.value === 'confirmed') {
+      // Too late to frontrun
+      await this.markProcessed(activity.transactionHash);
+      return;
+    }
+
+    // Extract gas price from transaction
+    let targetGasPrice: string | undefined;
+    if (tx.status === 'fulfilled' && tx.value) {
+      targetGasPrice = tx.value.gasPrice?.toString() || tx.value.maxFeePerGas?.toString();
+    }
+
+    logger.info(
+      `[Frontrun] Detected pending trade: ${activity.side.toUpperCase()} ${sizeUsd.toFixed(2)} USD on market ${activity.conditionId}`,
+    );
+
+    const signal: TradeSignal = {
+      trader: targetAddress,
+      marketId: activity.conditionId,
+      tokenId: activity.asset,
+      outcome: activity.outcomeIndex === 0 ? 'YES' : 'NO',
+      side: activity.side.toUpperCase() as 'BUY' | 'SELL',
+      sizeUsd,
+      price: activity.price,
+      timestamp: activityTime * 1000,
+      pendingTxHash: activity.transactionHash,
+      targetGasPrice,
+    };
+
+    await this.markProcessed(activity.transactionHash);
+    this.lastFetchTime.set(targetAddress, Math.max(this.lastFetchTime.get(targetAddress) || 0, activityTime));
+
+    // Execute frontrun
+    await this.deps.onDetectedTrade(signal);
   }
 
   private async checkTransactionStatus(txHash: string): Promise<'pending' | 'confirmed'> {

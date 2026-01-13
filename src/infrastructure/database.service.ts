@@ -65,11 +65,29 @@ export class DatabaseService {
     }
 
     try {
-      const doc = await ProcessedTransactionModel.findOne({ txHash }).exec();
+      // Use lean() and select only _id for better performance
+      const doc = await ProcessedTransactionModel.findOne({ txHash }).select('_id').lean().exec();
       return doc !== null;
     } catch (error) {
       this.logger.error(`Error checking if transaction is processed: ${txHash}`, error as Error);
       return false;
+    }
+  }
+
+  async areProcessed(txHashes: string[]): Promise<Set<string>> {
+    if (!this.isConnected || txHashes.length === 0) {
+      return new Set();
+    }
+
+    try {
+      const docs = await ProcessedTransactionModel.find({ txHash: { $in: txHashes } })
+        .select('txHash')
+        .lean()
+        .exec();
+      return new Set(docs.map(doc => doc.txHash));
+    } catch (error) {
+      this.logger.error(`Error checking if transactions are processed (batch): ${txHashes.length} transactions`, error as Error);
+      return new Set();
     }
   }
 
@@ -80,13 +98,36 @@ export class DatabaseService {
 
     try {
       const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+      // Use lean() for better performance when we don't need full document
       await ProcessedTransactionModel.findOneAndUpdate(
         { txHash },
         { txHash, processedAt: new Date(), expiresAt },
-        { upsert: true },
+        { upsert: true, lean: true },
       ).exec();
     } catch (error) {
       this.logger.error(`Error marking transaction as processed: ${txHash}`, error as Error);
+    }
+  }
+
+  async markProcessedBatch(txHashes: string[], ttlSeconds: number = 86400): Promise<void> {
+    if (!this.isConnected || txHashes.length === 0) {
+      return;
+    }
+
+    try {
+      const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+      const now = new Date();
+      const operations = txHashes.map(txHash => ({
+        updateOne: {
+          filter: { txHash },
+          update: { txHash, processedAt: now, expiresAt },
+          upsert: true,
+        },
+      }));
+
+      await ProcessedTransactionModel.bulkWrite(operations, { ordered: false });
+    } catch (error) {
+      this.logger.error(`Error marking transactions as processed (batch): ${txHashes.length} transactions`, error as Error);
     }
   }
 

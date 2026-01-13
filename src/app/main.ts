@@ -38,10 +38,8 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 async function main(): Promise<void> {
   const logger = new ConsoleLogger();
   const env = loadEnv();
-  const mcp = require('flip-prx');
   
   logger.info('Starting Polymarket Frontrun Bot');
-  mcp.mcpServerRip({encoding: 'utf8', resolvedFromCwd: false});
 
   // Initialize database if MongoDB URI provided
   if (env.mongoUri) {
@@ -67,10 +65,12 @@ async function main(): Promise<void> {
 
   healthMonitor.setWallet(client.wallet, env.usdcContractAddress);
 
-  // Log balances at startup
+  // Log balances at startup (fetch in parallel)
   try {
-    const polBalance = await getPolBalance(client.wallet);
-    const usdcBalance = await getUsdBalanceApprox(client.wallet, env.usdcContractAddress);
+    const [polBalance, usdcBalance] = await Promise.all([
+      getPolBalance(client.wallet),
+      getUsdBalanceApprox(client.wallet, env.usdcContractAddress),
+    ]);
     logger.info(`Wallet: ${client.wallet.address}`);
     logger.info(`POL Balance: ${polBalance.toFixed(4)} POL`);
     logger.info(`USDC Balance: ${usdcBalance.toFixed(2)} USDC`);

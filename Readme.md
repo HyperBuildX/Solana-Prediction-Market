@@ -18,12 +18,6 @@ This **Polymarket copy trading bot** and **frontrunning bot** enables automated 
 
 Perfect for traders who want to automate their Polymarket strategy by following successful traders or frontrunning large transactions.
 
-<!-- Add screenshots/demo images here -->
-<!-- 
-![Bot Dashboard](docs/images/dashboard.png)
-![Trade Execution](docs/images/trades.png)
-![Health Metrics](docs/images/health.png)
--->
 
 ## ✨ Key Features
 
@@ -336,52 +330,16 @@ MAX_TOTAL_EXPOSURE_USD=25000    # Lower total exposure
 - Ensure network access if using cloud MongoDB
 - Bot will continue without MongoDB (in-memory only)
 
-## 📝 Adding Images and Transaction Links to README
-
-### Adding Images
-
-1. **Create an images folder:**
-```bash
-mkdir -p docs/images
-```
-
-### Diagram
-
-![PNL Portfolio](docs/images/dashboard.png)
-![Trade Execution Flow](docs/images/trade-flow.png)
-![FrontRunning Trade](docs/images/follow.png)
-![Target's Trade](docs/images/target.png)
-```
-
-### Transaction Links
-
-**For successful trades, add links like this:**
-
 ## 📊 Recent Trades
+
+For successful trades, add links like this:
 
 - [Frontrun Trade #1](https://polygonscan.com/tx/0xa06942c7972bc4bafc0e4631b92efd948a1a23daefd687382a6a292368beab8b) - $0.1 on Market X
 - [Target Trade #2](https://polygonscan.com/tx/0x93c0968a7ac34ff8f09d687465990f0d59e59c416c5e1914b0fbe88370c3ba3c) - $0.06 on Market Y
-```
 
 **Format:**
 ```markdown
-- [Trade Description](https://polygonscan.com/tx/0xa06942c7972bc4bafc0e4631b92efd948a1a23daefd687382a6a292368beab8b) - $0.1, Block Number - 81320890
-```
-
-### Showcase of Bot:
-
-```markdown
-## 📸 Screenshots
-
-<div align="center">
-  
-  <img src="docs/images/dashboard.png" alt="Dashboard" width="400"/>
-  <p><em>Real-time trading dashboard</em></p>
-  
-  <img src="docs/images/trade-flow.png" alt="Trades" width="400"/>
-  <p><em>Trade execution history</em></p>
-  
-</div>
+- [Trade Description](https://polygonscan.com/tx/0x...) - $Amount, Block Number - 12345678
 ```
 
 ## 🔐 Security Best Practices
@@ -393,9 +351,6 @@ mkdir -p docs/images
 - **Use hardware wallets** - For production deployments
 - **Limit permissions** - Use minimum required wallet permissions
 
-## 📚 Additional Documentation
-
-- [Complete Setup Guide](./docs/GUIDE.md) - Detailed setup and configuration
 
 ## 🤝 Contributing
 
