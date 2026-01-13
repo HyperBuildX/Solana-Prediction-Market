@@ -3,24 +3,27 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
+import { DEFAULT_CONFIG } from '../core/constants';
+
 export class Cache<T> {
   private cache: Map<string, CacheEntry<T>> = new Map();
   private defaultTtl: number;
   private cleanupInterval?: NodeJS.Timeout;
   private readonly maxSize: number;
 
-  constructor(defaultTtlMs: number = 2000, maxSize: number = 1000) {
+  constructor(
+    defaultTtlMs: number = DEFAULT_CONFIG.ORDERBOOK_CACHE_TTL,
+    maxSize: number = DEFAULT_CONFIG.CACHE_MAX_SIZE,
+  ) {
     this.defaultTtl = defaultTtlMs;
     this.maxSize = maxSize;
-    // Start periodic cleanup to prevent memory leaks
     this.startCleanup();
   }
 
   private startCleanup(): void {
-    // Cleanup expired entries every 30 seconds
     this.cleanupInterval = setInterval(() => {
       this.cleanup();
-    }, 30000);
+    }, DEFAULT_CONFIG.CACHE_CLEANUP_INTERVAL);
   }
 
   get(key: string): T | null {

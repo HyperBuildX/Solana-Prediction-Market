@@ -1,6 +1,7 @@
 import { Wallet, providers } from 'ethers';
 import { ClobClient, Chain } from '@polymarket/clob-client';
 import type { ApiKeyCreds } from '@polymarket/clob-client';
+import { POLYGON_NETWORK, POLYMARKET_API_BASE } from '../core/constants';
 
 export type CreateClientInput = {
   rpcUrl: string;
@@ -10,17 +11,10 @@ export type CreateClientInput = {
   apiPassphrase?: string;
 };
 
-
 export async function createPolymarketClient(
   input: CreateClientInput,
 ): Promise<ClobClient & { wallet: Wallet }> {
-  // Configure for Polygon network (chainId: 137) and disable ENS
-  const network = {
-    chainId: 137,
-    name: 'matic',
-    ensAddress: undefined, // Disable ENS - Polygon doesn't support it
-  };
-  const provider = new providers.JsonRpcProvider(input.rpcUrl, network);
+  const provider = new providers.JsonRpcProvider(input.rpcUrl, POLYGON_NETWORK);
   
   // Override resolveName to prevent ENS resolution (Polygon doesn't support ENS)
   const originalResolveName = provider.resolveName.bind(provider);
@@ -45,7 +39,7 @@ export async function createPolymarketClient(
   }
 
   const client = new ClobClient(
-    'https://clob.polymarket.com',
+    POLYMARKET_API_BASE,
     Chain.POLYGON,
     wallet,
     creds,

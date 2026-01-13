@@ -7,6 +7,7 @@ import { postOrder } from '../utils/post-order.util';
 import { getUsdBalanceApprox, getPolBalance } from '../utils/get-balance.util';
 import { httpGet } from '../utils/fetch-data.util';
 import { PositionTrackerService } from './position-tracker.service';
+import { DEFAULT_CONFIG, POLYMARKET_DATA_API } from '../core/constants';
 
 export type TradeExecutorDeps = {
   client: ClobClient & { wallet: Wallet };
@@ -76,7 +77,7 @@ export class TradeExecutorService {
 
       // Balance validation
       const requiredUsdc = frontrunSize;
-      const minPolForGas = 0.05; // Higher gas needed for frontrunning
+      const minPolForGas = DEFAULT_CONFIG.MIN_POL_FOR_GAS;
 
       if (signal.side === 'BUY') {
         if (yourUsdBalance < requiredUsdc) {
@@ -147,7 +148,7 @@ export class TradeExecutorService {
   private async getTraderBalance(trader: string): Promise<number> {
     try {
       const positions: Position[] = await httpGet<Position[]>(
-        `https://data-api.polymarket.com/positions?user=${trader}`,
+        `${POLYMARKET_DATA_API}/positions?user=${trader}`,
       );
       const totalValue = positions.reduce((sum, pos) => sum + (pos.currentValue || pos.initialValue || 0), 0);
       return Math.max(100, totalValue);

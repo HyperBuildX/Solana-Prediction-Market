@@ -20,8 +20,13 @@ export type PostOrderInput = {
 };
 
 
-// Cache for order books (1 second TTL, max 500 entries)
-const orderBookCache = new Cache<any>(1000, 500);
+import { DEFAULT_CONFIG } from '../core/constants';
+
+// Cache for order books
+const orderBookCache = new Cache<any>(
+  DEFAULT_CONFIG.ORDERBOOK_CACHE_TTL,
+  DEFAULT_CONFIG.ORDERBOOK_CACHE_MAX_SIZE,
+);
 
 export async function postOrder(input: PostOrderInput): Promise<void> {
   const { client, marketId, tokenId, outcome, side, sizeUsd, maxAcceptablePrice, targetGasPrice, gasPriceMultiplier } = input;

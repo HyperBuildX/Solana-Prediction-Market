@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 import type { Logger } from '../utils/logger.util';
+import { DEFAULT_CONFIG } from '../core/constants';
 
 export interface ProcessedTransaction {
   txHash: string;
   processedAt: Date;
   expiresAt: Date;
 }
-
 
 const ProcessedTransactionSchema = new mongoose.Schema<ProcessedTransaction>({
   txHash: { type: String, required: true, unique: true, index: true },
@@ -91,7 +91,7 @@ export class DatabaseService {
     }
   }
 
-  async markProcessed(txHash: string, ttlSeconds: number = 86400): Promise<void> {
+  async markProcessed(txHash: string, ttlSeconds: number = DEFAULT_CONFIG.TRANSACTION_TTL_SECONDS): Promise<void> {
     if (!this.isConnected) {
       return;
     }
@@ -109,7 +109,7 @@ export class DatabaseService {
     }
   }
 
-  async markProcessedBatch(txHashes: string[], ttlSeconds: number = 86400): Promise<void> {
+  async markProcessedBatch(txHashes: string[], ttlSeconds: number = DEFAULT_CONFIG.TRANSACTION_TTL_SECONDS): Promise<void> {
     if (!this.isConnected || txHashes.length === 0) {
       return;
     }
@@ -144,4 +144,3 @@ export class DatabaseService {
     }
   }
 }
-

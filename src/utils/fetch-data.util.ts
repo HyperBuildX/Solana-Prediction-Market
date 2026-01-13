@@ -1,23 +1,24 @@
 import axios, { AxiosInstance, AxiosRequestConfig } from 'axios';
 import { polymarketLimiter, withRateLimit } from './rate-limiter.util';
+import { HTTP_CONFIG } from '../core/constants';
 
 // Create axios instance with optimized connection pooling
 const http = require('http');
 const https = require('https');
 
 const axiosInstance: AxiosInstance = axios.create({
-  timeout: 10000,
+  timeout: HTTP_CONFIG.TIMEOUT,
   httpAgent: new http.Agent({ 
     keepAlive: true, 
-    keepAliveMsecs: 30000,
-    maxSockets: 50, // Increased for better concurrency
-    maxFreeSockets: 10,
+    keepAliveMsecs: HTTP_CONFIG.KEEP_ALIVE_MSECS,
+    maxSockets: HTTP_CONFIG.MAX_SOCKETS,
+    maxFreeSockets: HTTP_CONFIG.MAX_FREE_SOCKETS,
   }),
   httpsAgent: new https.Agent({ 
     keepAlive: true, 
-    keepAliveMsecs: 30000,
-    maxSockets: 50, // Increased for better concurrency
-    maxFreeSockets: 10,
+    keepAliveMsecs: HTTP_CONFIG.KEEP_ALIVE_MSECS,
+    maxSockets: HTTP_CONFIG.MAX_SOCKETS,
+    maxFreeSockets: HTTP_CONFIG.MAX_FREE_SOCKETS,
   }),
 });
 

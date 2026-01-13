@@ -16,11 +16,7 @@ export type MempoolMonitorDeps = {
 };
 
 
-// Polymarket contract addresses on Polygon
-const POLYMARKET_CONTRACTS = [
-  '0x4bfb41d5b3570dfe5a4bde6f4f13907e456f2b13', // ConditionalTokens
-  '0x89c5cc945dd550bcffb72fe42bff002429f46fec', // Polymarket CLOB
-];
+import { POLYMARKET_CONTRACTS, POLYGON_NETWORK, DEFAULT_CONFIG, POLYMARKET_DATA_API } from '../core/constants';
 
 interface ActivityResponse {
   type: string;
@@ -73,9 +69,9 @@ export class MempoolMonitorService {
     // Mark in memory
     this.processedHashes.add(txHash);
 
-    // Mark in database if available (TTL: 24 hours)
+    // Mark in database if available
     if (this.deps.database) {
-      await this.deps.database.markProcessed(txHash, 86400);
+      await this.deps.database.markProcessed(txHash);
     }
   }
 
@@ -83,13 +79,7 @@ export class MempoolMonitorService {
     const { logger, env } = this.deps;
     logger.info('Starting Polymarket Frontrun Bot - Mempool Monitor');
     
-    // Configure for Polygon network (chainId: 137) and disable ENS
-    const network = {
-      chainId: 137,
-      name: 'matic',
-      ensAddress: undefined, // Disable ENS - Polygon doesn't support it
-    };
-    this.provider = new ethers.providers.JsonRpcProvider(env.rpcUrl, network);
+    this.provider = new ethers.providers.JsonRpcProvider(env.rpcUrl, POLYGON_NETWORK);
     this.isRunning = true;
 
     // Subscribe to pending transactions with error handling
@@ -168,11 +158,11 @@ export class MempoolMonitorService {
     const { logger, env } = this.deps;
     
     try {
-      const url = `https://data-api.polymarket.com/activity?user=${targetAddress}`;
+      const url = `${POLYMARKET_DATA_API}/activity?user=${targetAddress}`;
       const activities: ActivityResponse[] = await httpGet<ActivityResponse[]>(url);
 
       const now = Math.floor(Date.now() / 1000);
-      const cutoffTime = now - 60; // Only check very recent activities (last 60 seconds)
+      const cutoffTime = now - DEFAULT_CONFIG.ACTIVITY_CUTOFF_SECONDS;
 
       // Filter and process trades in parallel where possible
       const tradePromises: Promise<void>[] = [];
