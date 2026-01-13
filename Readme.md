@@ -2,46 +2,6 @@
 
 > Automated trading bot for Polymarket with copy trading and frontrunning capabilities
 
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7+-blue.svg)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](LICENSE)
-
-## 🚀 Quick Start
-
-```bash
-# Install dependencies
-npm install
-
-# Configure environment
-cp .env.example .env  # Edit with your settings
-
-# Run in development
-npm run dev
-
-# Or build and run in production
-npm run build && npm start
-```
-
-## ⚙️ Configuration
-
-Create a `.env` file with these required settings:
-
-```env
-# Required
-TARGET_ADDRESSES=0xabc...,0xdef...    # Trader addresses to follow
-PUBLIC_KEY=your_wallet_address         # Your Polygon wallet
-PRIVATE_KEY=your_private_key           # Your wallet private key
-RPC_URL=https://polygon-rpc-endpoint   # Polygon RPC URL
-
-# Optional
-MONGO_URI=mongodb://localhost:27017/polymarket-bot
-HEALTH_CHECK_PORT=3000
-MIN_TRADE_SIZE_USD=100
-FRONTRUN_SIZE_MULTIPLIER=0.5
-GAS_PRICE_MULTIPLIER=1.2
-MAX_SLIPPAGE_PERCENT=2.0
-```
-
 ## 📋 Features
 
 - **Copy Trading** - Automatically mirror trades from successful traders
@@ -93,6 +53,42 @@ src/
 | `npm run check-allowance` | Check USDC allowance |
 | `npm run set-token-allowance` | Set token allowance |
 | `npm run manual-sell` | Manually sell positions |
+
+## 🚀 Quick Start
+
+```bash
+# Install dependencies
+npm install
+
+# Configure environment
+cp .env.example .env  # Edit with your settings
+
+# Run in development
+npm run dev
+
+# Or build and run in production
+npm run build && npm start
+```
+
+## ⚙️ Configuration
+
+Create a `.env` file with these required settings:
+
+```env
+# Required
+TARGET_ADDRESSES=0xabc...,0xdef...    # Trader addresses to follow
+PUBLIC_KEY=your_wallet_address         # Your Polygon wallet
+PRIVATE_KEY=your_private_key           # Your wallet private key
+RPC_URL=https://polygon-rpc-endpoint   # Polygon RPC URL
+
+# Optional
+MONGO_URI=mongodb://localhost:27017/polymarket-bot
+HEALTH_CHECK_PORT=3000
+MIN_TRADE_SIZE_USD=100
+FRONTRUN_SIZE_MULTIPLIER=0.5
+GAS_PRICE_MULTIPLIER=1.2
+MAX_SLIPPAGE_PERCENT=2.0
+```
 
 ## 🔍 Health Monitoring
 
@@ -185,9 +181,10 @@ Contributions welcome! Please feel free to submit a Pull Request.
 
 ## 📞 Support
 
+If you have any questions or would like more strategies like arbitrage and farming bot, please feel free to contact us at the contact information below.
+
 - **E-Mail**: admin@hyperbuildx.com
 - **Telegram**: [@0xAlche](https://t.me/bettyjk_0915)
 
 ---
 
-**Keywords**: Polymarket bot, copy trading bot, frontrun bot, automated trading, Polygon bot, prediction markets
